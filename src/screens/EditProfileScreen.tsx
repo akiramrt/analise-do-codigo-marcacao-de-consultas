@@ -1,37 +1,56 @@
+// Importa React e hook de estado
 import React, { useState } from 'react';
+// Biblioteca de estilização
 import styled from 'styled-components/native';
+// Importa componentes nativos
 import { ScrollView, ViewStyle, Alert } from 'react-native';
+// Importa componentes de UI
 import { Button, Input } from 'react-native-elements';
+// Contexto de autenticação
 import { useAuth } from '../contexts/AuthContext';
+// Hook de navegação
 import { useNavigation } from '@react-navigation/native';
+// Tipagem da navegação
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
+// Tipagem de rotas
 import { RootStackParamList } from '../types/navigation';
+// Tema global
 import theme from '../styles/theme';
+// Cabeçalho
 import Header from '../components/Header';
+// Persistência local
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
 type EditProfileScreenProps = {
   navigation: NativeStackNavigationProp<RootStackParamList, 'EditProfile'>;
 };
 
+/**
+ * Tela de Edição de Perfil
+ * Permite ao usuário atualizar nome, email e especialidade (se médico).
+ */
 const EditProfileScreen: React.FC = () => {
   const { user, updateUser } = useAuth();
   const navigation = useNavigation<EditProfileScreenProps['navigation']>();
   
+  // Estados locais
   const [name, setName] = useState(user?.name || '');
   const [email, setEmail] = useState(user?.email || '');
   const [specialty, setSpecialty] = useState(user?.specialty || '');
   const [loading, setLoading] = useState(false);
 
+  // Função de salvar alterações
   const handleSaveProfile = async () => {
     try {
       setLoading(true);
 
+      // Validação simples
       if (!name.trim() || !email.trim()) {
         Alert.alert('Erro', 'Nome e email são obrigatórios');
         return;
       }
 
+      // Cria objeto atualizado
       const updatedUser = {
         ...user!,
         name: name.trim(),
@@ -42,9 +61,10 @@ const EditProfileScreen: React.FC = () => {
       // Atualiza no Context
       await updateUser(updatedUser);
 
-      // Salva no AsyncStorage
+      // Persiste no AsyncStorage
       await AsyncStorage.setItem('@MedicalApp:user', JSON.stringify(updatedUser));
 
+      // Alerta de sucesso
       Alert.alert('Sucesso', 'Perfil atualizado com sucesso!', [
         { text: 'OK', onPress: () => navigation.goBack() }
       ]);
@@ -59,13 +79,18 @@ const EditProfileScreen: React.FC = () => {
 
   return (
     <Container>
+      {/* Cabeçalho */}
       <Header />
+
       <ScrollView contentContainerStyle={styles.scrollContent}>
         <Title>Editar Perfil</Title>
 
+        {/* Card de perfil */}
         <ProfileCard>
+          {/* Avatar do usuário */}
           <Avatar source={{ uri: user?.image || 'https://via.placeholder.com/150' }} />
           
+          {/* Campo Nome */}
           <Input
             label="Nome"
             value={name}
@@ -74,6 +99,7 @@ const EditProfileScreen: React.FC = () => {
             placeholder="Digite seu nome"
           />
 
+          {/* Campo Email */}
           <Input
             label="Email"
             value={email}
@@ -84,6 +110,7 @@ const EditProfileScreen: React.FC = () => {
             autoCapitalize="none"
           />
 
+          {/* Campo Especialidade (somente para médicos) */}
           {user?.role === 'doctor' && (
             <Input
               label="Especialidade"
@@ -94,11 +121,19 @@ const EditProfileScreen: React.FC = () => {
             />
           )}
 
+          {/* Badge com o papel do usuário */}
           <RoleBadge role={user?.role || ''}>
-            <RoleText>{user?.role === 'admin' ? 'Administrador' : user?.role === 'doctor' ? 'Médico' : 'Paciente'}</RoleText>
+            <RoleText>
+              {user?.role === 'admin'
+                ? 'Administrador'
+                : user?.role === 'doctor'
+                ? 'Médico'
+                : 'Paciente'}
+            </RoleText>
           </RoleBadge>
         </ProfileCard>
 
+        {/* Botão de salvar */}
         <Button
           title="Salvar Alterações"
           onPress={handleSaveProfile}
@@ -107,6 +142,7 @@ const EditProfileScreen: React.FC = () => {
           buttonStyle={styles.saveButton}
         />
 
+        {/* Botão de cancelar */}
         <Button
           title="Cancelar"
           onPress={() => navigation.goBack()}
@@ -118,6 +154,7 @@ const EditProfileScreen: React.FC = () => {
   );
 };
 
+// Estilos
 const styles = {
   scrollContent: {
     padding: 20,
@@ -139,6 +176,7 @@ const styles = {
   },
 };
 
+// Componentes estilizados
 const Container = styled.View`
   flex: 1;
   background-color: ${theme.colors.background};

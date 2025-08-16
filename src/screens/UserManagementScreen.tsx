@@ -1,7 +1,11 @@
+// Tela de Gerenciamento de Usuários
+// Responsável por exibir, adicionar, editar e excluir usuários do app
+// Utiliza AsyncStorage para persistir a lista de usuários localmente
+
 import React, { useState } from 'react';
 import styled from 'styled-components/native';
 import { ScrollView, ViewStyle, TextStyle } from 'react-native';
-import { Button, ListItem, Text } from 'react-native-elements';
+import { Button, ListItem } from 'react-native-elements';
 import { useAuth } from '../contexts/AuthContext';
 import { useNavigation } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
@@ -11,10 +15,12 @@ import theme from '../styles/theme';
 import Header from '../components/Header';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
+// Tipagem da navegação
 type UserManagementScreenProps = {
   navigation: NativeStackNavigationProp<RootStackParamList, 'UserManagement'>;
 };
 
+// Tipagem de um usuário
 interface User {
   id: string;
   name: string;
@@ -22,22 +28,24 @@ interface User {
   role: 'admin' | 'doctor' | 'patient';
 }
 
+// Props para estilização condicional dos badges de papel
 interface StyledProps {
   role: string;
 }
 
 const UserManagementScreen: React.FC = () => {
-  const { user } = useAuth();
+  const { user } = useAuth(); // Usuário logado
   const navigation = useNavigation<UserManagementScreenProps['navigation']>();
   const [users, setUsers] = useState<User[]>([]);
   const [loading, setLoading] = useState(true);
 
+  // Carrega usuários salvos no AsyncStorage
   const loadUsers = async () => {
     try {
       const storedUsers = await AsyncStorage.getItem('@MedicalApp:users');
       if (storedUsers) {
         const allUsers: User[] = JSON.parse(storedUsers);
-        // Filtra o usuário atual da lista
+        // Remove o usuário logado da listagem
         const filteredUsers = allUsers.filter(u => u.id !== user?.id);
         setUsers(filteredUsers);
       }
@@ -48,6 +56,7 @@ const UserManagementScreen: React.FC = () => {
     }
   };
 
+  // Exclui um usuário da lista
   const handleDeleteUser = async (userId: string) => {
     try {
       const storedUsers = await AsyncStorage.getItem('@MedicalApp:users');
@@ -55,20 +64,21 @@ const UserManagementScreen: React.FC = () => {
         const allUsers: User[] = JSON.parse(storedUsers);
         const updatedUsers = allUsers.filter(u => u.id !== userId);
         await AsyncStorage.setItem('@MedicalApp:users', JSON.stringify(updatedUsers));
-        loadUsers(); // Recarrega a lista
+        loadUsers(); // Atualiza lista após exclusão
       }
     } catch (error) {
       console.error('Erro ao deletar usuário:', error);
     }
   };
 
-  // Carrega os usuários quando a tela estiver em foco
+  // Recarrega usuários quando a tela entra em foco
   useFocusEffect(
     React.useCallback(() => {
       loadUsers();
     }, [])
   );
 
+  // Retorna o texto amigável do papel do usuário
   const getRoleText = (role: string) => {
     switch (role) {
       case 'admin':
@@ -88,6 +98,7 @@ const UserManagementScreen: React.FC = () => {
       <ScrollView contentContainerStyle={styles.scrollContent}>
         <Title>Gerenciar Usuários</Title>
 
+        {/* Botão para adicionar novos usuários */}
         <Button
           title="Adicionar Novo Usuário"
           onPress={() => {}}
@@ -95,6 +106,7 @@ const UserManagementScreen: React.FC = () => {
           buttonStyle={styles.buttonStyle}
         />
 
+        {/* Lista de usuários */}
         {loading ? (
           <LoadingText>Carregando usuários...</LoadingText>
         ) : users.length === 0 ? (
@@ -133,6 +145,7 @@ const UserManagementScreen: React.FC = () => {
           ))
         )}
 
+        {/* Voltar para tela anterior */}
         <Button
           title="Voltar"
           onPress={() => navigation.goBack()}
@@ -144,6 +157,7 @@ const UserManagementScreen: React.FC = () => {
   );
 };
 
+// Estilos principais
 const styles = {
   scrollContent: {
     padding: 20,
@@ -184,6 +198,7 @@ const styles = {
   },
 };
 
+// Styled Components
 const Container = styled.View`
   flex: 1;
   background-color: ${theme.colors.background};
@@ -258,4 +273,4 @@ const ButtonContainer = styled.View`
   margin-top: 8px;
 `;
 
-export default UserManagementScreen; 
+export default UserManagementScreen;

@@ -1,20 +1,30 @@
+// Importa React e hook de estado
 import React, { useState } from 'react';
+// Biblioteca de estilização
 import styled from 'styled-components/native';
+// Componentes nativos e UI
 import { ScrollView, ViewStyle, TextStyle } from 'react-native';
 import { Button, ListItem, Text } from 'react-native-elements';
+// Contexto de autenticação
 import { useAuth } from '../contexts/AuthContext';
+// Navegação
 import { useNavigation } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { useFocusEffect } from '@react-navigation/native';
+// Tipos de rotas
 import { RootStackParamList } from '../types/navigation';
+// Tema global
 import theme from '../styles/theme';
+// Cabeçalho
 import Header from '../components/Header';
+// Persistência local
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
 type PatientDashboardScreenProps = {
   navigation: NativeStackNavigationProp<RootStackParamList, 'PatientDashboard'>;
 };
 
+// Tipagem de consultas
 interface Appointment {
   id: string;
   patientId: string;
@@ -27,10 +37,12 @@ interface Appointment {
   status: 'pending' | 'confirmed' | 'cancelled';
 }
 
+// Tipagem para estilos de status
 interface StyledProps {
   status: string;
 }
 
+// Função utilitária para cor de status
 const getStatusColor = (status: string) => {
   switch (status) {
     case 'confirmed':
@@ -42,6 +54,7 @@ const getStatusColor = (status: string) => {
   }
 };
 
+// Função utilitária para texto de status
 const getStatusText = (status: string) => {
   switch (status) {
     case 'confirmed':
@@ -53,12 +66,17 @@ const getStatusText = (status: string) => {
   }
 };
 
+/**
+ * Tela de Dashboard do Paciente
+ * Exibe consultas do paciente logado e permite acessar perfil, agendar e sair.
+ */
 const PatientDashboardScreen: React.FC = () => {
   const { user, signOut } = useAuth();
   const navigation = useNavigation<PatientDashboardScreenProps['navigation']>();
   const [appointments, setAppointments] = useState<Appointment[]>([]);
   const [loading, setLoading] = useState(true);
 
+  // Carrega consultas do paciente logado
   const loadAppointments = async () => {
     try {
       const storedAppointments = await AsyncStorage.getItem('@MedicalApp:appointments');
@@ -76,7 +94,7 @@ const PatientDashboardScreen: React.FC = () => {
     }
   };
 
-  // Carrega as consultas quando a tela estiver em foco
+  // Carrega ao focar na tela
   useFocusEffect(
     React.useCallback(() => {
       loadAppointments();
@@ -85,10 +103,13 @@ const PatientDashboardScreen: React.FC = () => {
 
   return (
     <Container>
+      {/* Cabeçalho */}
       <Header />
+
       <ScrollView contentContainerStyle={styles.scrollContent}>
         <Title>Minhas Consultas</Title>
 
+        {/* Botão agendar */}
         <Button
           title="Agendar Nova Consulta"
           onPress={() => navigation.navigate('CreateAppointment')}
@@ -96,6 +117,7 @@ const PatientDashboardScreen: React.FC = () => {
           buttonStyle={styles.buttonStyle}
         />
 
+        {/* Botão perfil */}
         <Button
           title="Meu Perfil"
           onPress={() => navigation.navigate('Profile')}
@@ -103,6 +125,7 @@ const PatientDashboardScreen: React.FC = () => {
           buttonStyle={styles.buttonStyle}
         />
 
+        {/* Botão configurações */}
         <Button
           title="Configurações"
           onPress={() => navigation.navigate('Settings')}
@@ -110,6 +133,7 @@ const PatientDashboardScreen: React.FC = () => {
           buttonStyle={styles.settingsButton}
         />
 
+        {/* Lista de consultas */}
         {loading ? (
           <LoadingText>Carregando consultas...</LoadingText>
         ) : appointments.length === 0 ? (
@@ -140,6 +164,7 @@ const PatientDashboardScreen: React.FC = () => {
           ))
         )}
 
+        {/* Botão sair */}
         <Button
           title="Sair"
           onPress={signOut}
@@ -151,6 +176,7 @@ const PatientDashboardScreen: React.FC = () => {
   );
 };
 
+// Estilos
 const styles = {
   scrollContent: {
     padding: 20,
@@ -193,6 +219,7 @@ const styles = {
   },
 };
 
+// Componentes estilizados
 const Container = styled.View`
   flex: 1;
   background-color: ${theme.colors.background};
@@ -243,4 +270,4 @@ const StatusText = styled.Text<StyledProps>`
   font-weight: 500;
 `;
 
-export default PatientDashboardScreen; 
+export default PatientDashboardScreen;

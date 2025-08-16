@@ -1,14 +1,23 @@
+// Importa React e hooks
 import React, { useState } from 'react';
+// Biblioteca de estilos
 import styled from 'styled-components/native';
+// Componentes e utilitários do React Native
 import { ScrollView, ViewStyle, Alert, Share } from 'react-native';
+// Componentes prontos de UI
 import { Button, ListItem, Switch, Text } from 'react-native-elements';
+// Contexto de autenticação
 import { useAuth } from '../contexts/AuthContext';
+// Navegação
 import { useNavigation } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { useFocusEffect } from '@react-navigation/native';
 import { RootStackParamList } from '../types/navigation';
+// Tema global
 import theme from '../styles/theme';
+// Header da aplicação
 import Header from '../components/Header';
+// Serviço de armazenamento
 import { storageService } from '../services/storage';
 
 type SettingsScreenProps = {
@@ -22,9 +31,15 @@ interface AppSettings {
   language: string;
 }
 
+/**
+ * Tela de Configurações
+ * Permite gerenciar preferências, armazenamento, backups e limpar dados do app.
+ */
 const SettingsScreen: React.FC = () => {
   const { user, signOut } = useAuth();
   const navigation = useNavigation<SettingsScreenProps['navigation']>();
+
+  // Estados locais
   const [settings, setSettings] = useState<AppSettings>({
     notifications: true,
     autoBackup: true,
@@ -34,6 +49,7 @@ const SettingsScreen: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [storageInfo, setStorageInfo] = useState<any>(null);
 
+  // Carrega configurações do storage
   const loadSettings = async () => {
     try {
       const appSettings = await storageService.getAppSettings();
@@ -48,12 +64,14 @@ const SettingsScreen: React.FC = () => {
     }
   };
 
+  // Executa ao entrar na tela
   useFocusEffect(
     React.useCallback(() => {
       loadSettings();
     }, [])
   );
 
+  // Atualiza configuração individual
   const updateSetting = async (key: keyof AppSettings, value: any) => {
     try {
       const updatedSettings = { ...settings, [key]: value };
@@ -65,6 +83,7 @@ const SettingsScreen: React.FC = () => {
     }
   };
 
+  // Criação de backup e compartilhamento
   const handleCreateBackup = async () => {
     try {
       setLoading(true);
@@ -86,6 +105,7 @@ const SettingsScreen: React.FC = () => {
     }
   };
 
+  // Limpar cache da aplicação
   const handleClearCache = async () => {
     Alert.alert(
       'Limpar Cache',
@@ -109,6 +129,7 @@ const SettingsScreen: React.FC = () => {
     );
   };
 
+  // Apagar todos os dados do app
   const handleClearAllData = async () => {
     Alert.alert(
       'Apagar Todos os Dados',
@@ -146,6 +167,7 @@ const SettingsScreen: React.FC = () => {
     );
   };
 
+  // Tela de carregamento
   if (loading) {
     return (
       <Container>
@@ -157,14 +179,17 @@ const SettingsScreen: React.FC = () => {
     );
   }
 
+  // Interface principal
   return (
     <Container>
       <Header />
       <ScrollView contentContainerStyle={styles.scrollContent}>
         <Title>Configurações</Title>
 
+        {/* Preferências */}
         <SectionTitle>Preferências</SectionTitle>
         <SettingsCard>
+          {/* Notificações */}
           <ListItem>
             <ListItem.Content>
               <ListItem.Title>Notificações</ListItem.Title>
@@ -177,6 +202,7 @@ const SettingsScreen: React.FC = () => {
             />
           </ListItem>
 
+          {/* Backup Automático */}
           <ListItem>
             <ListItem.Content>
               <ListItem.Title>Backup Automático</ListItem.Title>
@@ -190,6 +216,7 @@ const SettingsScreen: React.FC = () => {
           </ListItem>
         </SettingsCard>
 
+        {/* Dados e Armazenamento */}
         <SectionTitle>Dados e Armazenamento</SectionTitle>
         <SettingsCard>
           {storageInfo && (
@@ -206,6 +233,7 @@ const SettingsScreen: React.FC = () => {
           )}
         </SettingsCard>
 
+        {/* Ações de dados */}
         <Button
           title="Criar Backup"
           onPress={handleCreateBackup}
@@ -221,6 +249,7 @@ const SettingsScreen: React.FC = () => {
           buttonStyle={styles.cacheButton}
         />
 
+        {/* Ações perigosas */}
         <SectionTitle>Ações Perigosas</SectionTitle>
         <Button
           title="Apagar Todos os Dados"
@@ -229,6 +258,7 @@ const SettingsScreen: React.FC = () => {
           buttonStyle={styles.dangerButton}
         />
 
+        {/* Voltar */}
         <Button
           title="Voltar"
           onPress={() => navigation.goBack()}
@@ -240,6 +270,7 @@ const SettingsScreen: React.FC = () => {
   );
 };
 
+// Estilos
 const styles = {
   scrollContent: {
     padding: 20,
@@ -266,6 +297,7 @@ const styles = {
   },
 };
 
+// Componentes estilizados
 const Container = styled.View`
   flex: 1;
   background-color: ${theme.colors.background};

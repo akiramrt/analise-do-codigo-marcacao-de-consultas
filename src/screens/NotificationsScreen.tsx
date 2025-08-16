@@ -1,26 +1,40 @@
+// Importa React e hook de estado
 import React, { useState } from 'react';
+// Biblioteca de estilização
 import styled from 'styled-components/native';
+// Componentes nativos e UI
 import { ScrollView, ViewStyle, Alert } from 'react-native';
 import { Button, ListItem, Badge } from 'react-native-elements';
+// Contexto de autenticação
 import { useAuth } from '../contexts/AuthContext';
+// Navegação
 import { useNavigation } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { useFocusEffect } from '@react-navigation/native';
+// Tipos de rotas
 import { RootStackParamList } from '../types/navigation';
+// Tema global
 import theme from '../styles/theme';
+// Componentes
 import Header from '../components/Header';
+// Serviço de notificações
 import { notificationService, Notification } from '../services/notifications';
 
 type NotificationsScreenProps = {
   navigation: NativeStackNavigationProp<RootStackParamList, 'Notifications'>;
 };
 
+/**
+ * Tela de Notificações
+ * Exibe notificações do usuário, permitindo marcar como lidas ou excluir.
+ */
 const NotificationsScreen: React.FC = () => {
   const { user } = useAuth();
   const navigation = useNavigation<NotificationsScreenProps['navigation']>();
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [loading, setLoading] = useState(true);
 
+  // Carrega notificações do usuário
   const loadNotifications = async () => {
     if (!user?.id) return;
     
@@ -34,12 +48,14 @@ const NotificationsScreen: React.FC = () => {
     }
   };
 
+  // Atualiza ao focar na tela
   useFocusEffect(
     React.useCallback(() => {
       loadNotifications();
     }, [user?.id])
   );
 
+  // Marca uma notificação como lida
   const handleMarkAsRead = async (notificationId: string) => {
     try {
       await notificationService.markAsRead(notificationId);
@@ -49,6 +65,7 @@ const NotificationsScreen: React.FC = () => {
     }
   };
 
+  // Marca todas como lidas
   const handleMarkAllAsRead = async () => {
     if (!user?.id) return;
     
@@ -60,6 +77,7 @@ const NotificationsScreen: React.FC = () => {
     }
   };
 
+  // Exclui notificação com confirmação
   const handleDeleteNotification = async (notificationId: string) => {
     Alert.alert(
       'Excluir Notificação',
@@ -82,6 +100,7 @@ const NotificationsScreen: React.FC = () => {
     );
   };
 
+  // Ícones por tipo de notificação
   const getNotificationIcon = (type: string) => {
     switch (type) {
       case 'appointment_confirmed':
@@ -95,6 +114,7 @@ const NotificationsScreen: React.FC = () => {
     }
   };
 
+  // Formata data para pt-BR
   const formatDate = (dateString: string) => {
     const date = new Date(dateString);
     return date.toLocaleDateString('pt-BR', {
@@ -106,12 +126,14 @@ const NotificationsScreen: React.FC = () => {
     });
   };
 
+  // Conta notificações não lidas
   const unreadCount = notifications.filter(n => !n.read).length;
 
   return (
     <Container>
       <Header />
       <ScrollView contentContainerStyle={styles.scrollContent}>
+        {/* Título + Badge */}
         <TitleContainer>
           <Title>Notificações</Title>
           {unreadCount > 0 && (
@@ -123,6 +145,7 @@ const NotificationsScreen: React.FC = () => {
           )}
         </TitleContainer>
 
+        {/* Botão para marcar todas como lidas */}
         {unreadCount > 0 && (
           <Button
             title="Marcar todas como lidas"
@@ -132,6 +155,7 @@ const NotificationsScreen: React.FC = () => {
           />
         )}
 
+        {/* Botão voltar */}
         <Button
           title="Voltar"
           onPress={() => navigation.goBack()}
@@ -139,6 +163,7 @@ const NotificationsScreen: React.FC = () => {
           buttonStyle={styles.buttonStyle}
         />
 
+        {/* Lista de notificações */}
         {loading ? (
           <LoadingText>Carregando notificações...</LoadingText>
         ) : notifications.length === 0 ? (
@@ -174,6 +199,7 @@ const NotificationsScreen: React.FC = () => {
   );
 };
 
+// Estilos
 const styles = {
   scrollContent: {
     padding: 20,
@@ -210,6 +236,7 @@ const styles = {
   },
 };
 
+// Componentes estilizados
 const Container = styled.View`
   flex: 1;
   background-color: ${theme.colors.background};
