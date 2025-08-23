@@ -1,25 +1,33 @@
-import React, { createContext, useContext, useState, useEffect } from 'react';
-import AsyncStorage from '@react-native-async-storage/async-storage';
-import { authService } from '../services/auth';
-import { User, LoginCredentials, RegisterData, AuthContextData } from '../types/auth';
+// ====== IMPORTS ======
+import React, { createContext, useContext, useState, useEffect } from 'react'; // React e hooks.
+import AsyncStorage from '@react-native-async-storage/async-storage'; // Armazenamento local persistente.
+import { authService } from '../services/auth'; // Serviço de autenticação.
+import { User, LoginCredentials, RegisterData, AuthContextData } from '../types/auth'; // Tipos centralizados.
 
-// Chaves de armazenamento
+// ====== CONSTANTES ======
+// Chaves usadas no AsyncStorage para persistir dados de autenticação.
 const STORAGE_KEYS = {
   USER: '@MedicalApp:user',
   TOKEN: '@MedicalApp:token',
 };
 
+// ====== CONTEXTO ======
+// Contexto de autenticação que expõe dados do usuário e funções de login/logout.
 const AuthContext = createContext<AuthContextData>({} as AuthContextData);
 
+// ====== PROVIDER ======
+// Responsável por gerenciar e fornecer os dados de autenticação para toda a aplicação.
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const [user, setUser] = useState<User | null>(null);
-  const [loading, setLoading] = useState(true);
+  const [user, setUser] = useState<User | null>(null); // Estado do usuário logado.
+  const [loading, setLoading] = useState(true); // Estado de carregamento inicial (quando checa storage).
 
+  // Ao montar o provider, tenta recuperar usuário armazenado e carregar usuários registrados.
   useEffect(() => {
     loadStoredUser();
     loadRegisteredUsers();
   }, []);
 
+  // Recupera usuário armazenado no AsyncStorage.
   const loadStoredUser = async () => {
     try {
       const storedUser = await authService.getStoredUser();
@@ -33,6 +41,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   };
 
+  // Carrega lista de usuários registrados (simulação).
   const loadRegisteredUsers = async () => {
     try {
       await authService.loadRegisteredUsers();
@@ -41,6 +50,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   };
 
+  // Realiza login com credenciais e armazena usuário/token no AsyncStorage.
   const signIn = async (credentials: LoginCredentials) => {
     try {
       const response = await authService.signIn(credentials);
@@ -52,6 +62,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   };
 
+  // Realiza registro de novo usuário e salva dados no AsyncStorage.
   const register = async (data: RegisterData) => {
     try {
       const response = await authService.register(data);
@@ -63,6 +74,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   };
 
+  // Faz logout: remove dados do usuário e token do AsyncStorage.
   const signOut = async () => {
     try {
       await authService.signOut();
@@ -74,6 +86,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   };
 
+  // Atualiza informações do usuário e persiste no AsyncStorage.
   const updateUser = async (updatedUser: User) => {
     try {
       setUser(updatedUser);
@@ -84,6 +97,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   };
 
+  // Fornece dados e funções de autenticação para o restante da aplicação.
   return (
     <AuthContext.Provider value={{ user, loading, signIn, register, signOut, updateUser }}>
       {children}
@@ -91,10 +105,12 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   );
 };
 
+// ====== HOOK CUSTOMIZADO ======
+// Hook que consome o AuthContext (garante uso dentro do AuthProvider).
 export const useAuth = () => {
   const context = useContext(AuthContext);
   if (!context) {
     throw new Error('useAuth must be used within an AuthProvider');
   }
   return context;
-}; 
+};
