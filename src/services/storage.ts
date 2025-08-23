@@ -1,19 +1,21 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
+// Estrutura genérica para armazenar dados no AsyncStorage
 export interface StorageData {
   [key: string]: any;
 }
 
+// Estrutura usada para armazenar itens no cache em memória
 interface CacheItem<T> {
-  data: T;
-  timestamp: number;
-  expiry?: number;
+  data: T;           // Dados armazenados
+  timestamp: number; // Momento em que o item foi salvo
+  expiry?: number;   // Tempo de expiração em milissegundos (opcional)
 }
 
-// Cache em memória para melhor performance
+// Cache em memória para melhorar performance e evitar leituras repetitivas do AsyncStorage
 const cache = new Map<string, CacheItem<any>>();
 
-// Chaves de armazenamento centralizadas
+// Chaves centralizadas para padronizar os acessos ao AsyncStorage
 export const STORAGE_KEYS = {
   USER: '@MedicalApp:user',
   TOKEN: '@MedicalApp:token',
@@ -24,14 +26,14 @@ export const STORAGE_KEYS = {
   STATISTICS_CACHE: '@MedicalApp:statisticsCache',
 } as const;
 
+// Serviço para manipulação centralizada de armazenamento e cache
 export const storageService = {
-  // Operações básicas com cache
+  // Salva um item no AsyncStorage e no cache (com expiração opcional)
   async setItem<T>(key: string, value: T, expiryMinutes?: number): Promise<void> {
     try {
       const serializedValue = JSON.stringify(value);
       await AsyncStorage.setItem(key, serializedValue);
       
-      // Atualiza o cache
       const cacheItem: CacheItem<T> = {
         data: value,
         timestamp: Date.now(),
@@ -44,25 +46,26 @@ export const storageService = {
     }
   },
 
+  // Busca item do cache (se válido) ou do AsyncStorage
   async getItem<T>(key: string, defaultValue?: T): Promise<T | null> {
     try {
-      // Verifica se existe no cache e se não expirou
+      // Primeiro tenta pegar do cache
       const cached = cache.get(key);
       if (cached) {
         if (!cached.expiry || cached.expiry > Date.now()) {
           return cached.data as T;
         } else {
-          // Remove do cache se expirou
+          // Remove do cache se expirado
           cache.delete(key);
         }
       }
 
-      // Busca no AsyncStorage
+      // Busca persistida no AsyncStorage
       const stored = await AsyncStorage.getItem(key);
       if (stored) {
         const parsed = JSON.parse(stored) as T;
         
-        // Adiciona ao cache
+        // Atualiza cache
         cache.set(key, {
           data: parsed,
           timestamp: Date.now(),
@@ -78,6 +81,7 @@ export const storageService = {
     }
   },
 
+  // Remove item específico do AsyncStorage e do cache
   async removeItem(key: string): Promise<void> {
     try {
       await AsyncStorage.removeItem(key);
@@ -88,6 +92,7 @@ export const storageService = {
     }
   },
 
+  // Limpa todo o armazenamento e cache
   async clearAll(): Promise<void> {
     try {
       await AsyncStorage.clear();
@@ -98,7 +103,9 @@ export const storageService = {
     }
   },
 
-  // Operações específicas para consultas
+  // --------------------------
+  // Operações específicas: Consultas
+  // --------------------------
   async getAppointments(): Promise<any[]> {
     return await this.getItem(STORAGE_KEYS.APPOINTMENTS, []);
   },
@@ -127,7 +134,9 @@ export const storageService = {
     await this.saveAppointments(filteredAppointments);
   },
 
-  // Operações para usuários
+  // --------------------------
+  // Operações específicas: Usuários
+  // --------------------------
   async getRegisteredUsers(): Promise<any[]> {
     return await this.getItem(STORAGE_KEYS.REGISTERED_USERS, []);
   },
@@ -142,7 +151,9 @@ export const storageService = {
     await this.saveRegisteredUsers(users);
   },
 
-  // Operações para notificações
+  // --------------------------
+  // Operações específicas: Notificações
+  // --------------------------
   async getNotifications(): Promise<any[]> {
     return await this.getItem(STORAGE_KEYS.NOTIFICATIONS, []);
   },
@@ -157,9 +168,12 @@ export const storageService = {
     await this.saveNotifications(notifications);
   },
 
-  // Backup e restore
+  // --------------------------
+  // Backup e restauração
+  // --------------------------
   async createBackup(): Promise<string> {
     try {
+      // Estrutura de backup contendo dados principais
       const backup = {
         timestamp: new Date().toISOString(),
         data: {
@@ -192,7 +206,9 @@ export const storageService = {
     }
   },
 
+  // --------------------------
   // Validação de dados
+  // --------------------------
   validateAppointment(appointment: any): boolean {
     return (
       appointment &&
@@ -215,12 +231,16 @@ export const storageService = {
     );
   },
 
-  // Limpeza de cache
+  // --------------------------
+  // Limpeza de cache em memória
+  // --------------------------
   clearCache(): void {
     cache.clear();
   },
 
-  // Informações de armazenamento
+  // --------------------------
+  // Informações do armazenamento
+  // --------------------------
   async getStorageInfo(): Promise<{
     cacheSize: number;
     totalKeys: number;
@@ -234,13 +254,15 @@ export const storageService = {
     });
 
     return {
-      cacheSize: cache.size,
-      totalKeys: allKeys.length,
-      lastAccess,
+      cacheSize: cache.size, // Quantidade de itens no cache
+      totalKeys: allKeys.length, // Quantidade total de chaves no AsyncStorage
+      lastAccess, // Último acesso de cada chave no cache
     };
   },
 
+  // --------------------------
   // Configurações da aplicação
+  // --------------------------
   async getAppSettings(): Promise<any> {
     return await this.getItem(STORAGE_KEYS.APP_SETTINGS, {
       theme: 'light',
