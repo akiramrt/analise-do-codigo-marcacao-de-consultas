@@ -4,11 +4,12 @@ import { Modal, ViewStyle } from 'react-native';
 import { Button, Input } from 'react-native-elements';
 import theme from '../styles/theme';
 
+// Props esperadas pelo componente de modal de ação em consultas
 interface AppointmentActionModalProps {
-  visible: boolean;
-  onClose: () => void;
-  onConfirm: (reason?: string) => void;
-  actionType: 'confirm' | 'cancel';
+  visible: boolean; // Define se o modal está visível
+  onClose: () => void; // Função para fechar o modal
+  onConfirm: (reason?: string) => void; // Função chamada ao confirmar ação, podendo receber motivo
+  actionType: 'confirm' | 'cancel'; // Tipo da ação (confirmar ou cancelar)
   appointmentDetails: {
     patientName: string;
     doctorName: string;
@@ -18,6 +19,7 @@ interface AppointmentActionModalProps {
   };
 }
 
+// Componente principal do modal
 const AppointmentActionModal: React.FC<AppointmentActionModalProps> = ({
   visible,
   onClose,
@@ -25,19 +27,23 @@ const AppointmentActionModal: React.FC<AppointmentActionModalProps> = ({
   actionType,
   appointmentDetails,
 }) => {
+  // Estado local para armazenar o motivo do cancelamento (se necessário)
   const [reason, setReason] = React.useState('');
 
+  // Confirma a ação (confirmação ou cancelamento) e limpa o campo de motivo
   const handleConfirm = () => {
     onConfirm(reason.trim() || undefined);
     setReason('');
     onClose();
   };
 
+  // Fecha o modal e reseta o campo de motivo
   const handleClose = () => {
     setReason('');
     onClose();
   };
 
+  // Define se a ação é de cancelamento
   const isCancel = actionType === 'cancel';
 
   return (
@@ -49,13 +55,16 @@ const AppointmentActionModal: React.FC<AppointmentActionModalProps> = ({
     >
       <Overlay>
         <ModalContainer>
+          {/* Cabeçalho com título dinâmico */}
           <Header>
             <Title>
               {isCancel ? 'Cancelar Consulta' : 'Confirmar Consulta'}
             </Title>
           </Header>
 
+          {/* Conteúdo principal do modal */}
           <Content>
+            {/* Informações da consulta */}
             <AppointmentInfo>
               <InfoRow>
                 <InfoLabel>Paciente:</InfoLabel>
@@ -75,6 +84,7 @@ const AppointmentActionModal: React.FC<AppointmentActionModalProps> = ({
               </InfoRow>
             </AppointmentInfo>
 
+            {/* Campo para inserir motivo do cancelamento (aparece apenas se ação for cancelar) */}
             {isCancel && (
               <ReasonContainer>
                 <Input
@@ -89,6 +99,7 @@ const AppointmentActionModal: React.FC<AppointmentActionModalProps> = ({
               </ReasonContainer>
             )}
 
+            {/* Texto de confirmação da ação */}
             <ConfirmationText isCancel={isCancel}>
               {isCancel 
                 ? 'Tem certeza que deseja cancelar esta consulta?'
@@ -97,6 +108,7 @@ const AppointmentActionModal: React.FC<AppointmentActionModalProps> = ({
             </ConfirmationText>
           </Content>
 
+          {/* Botões de ação: cancelar ou confirmar */}
           <ButtonContainer>
             <Button
               title="Cancelar"
@@ -120,6 +132,7 @@ const AppointmentActionModal: React.FC<AppointmentActionModalProps> = ({
   );
 };
 
+// Estilos usados em componentes específicos do React Native Elements
 const styles = {
   reasonInput: {
     marginBottom: 10,
@@ -141,6 +154,7 @@ const styles = {
   },
 };
 
+// Estilização com styled-components
 const Overlay = styled.View`
   flex: 1;
   background-color: rgba(0, 0, 0, 0.5);
