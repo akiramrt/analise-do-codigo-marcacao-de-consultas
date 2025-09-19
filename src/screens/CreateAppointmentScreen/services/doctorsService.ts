@@ -1,5 +1,5 @@
-import { authApiService } from '../../services/authApi';
-import { User } from '../../types/auth';
+import { authApiService } from '../../../services/authApi';
+import { User } from '../../../types/auth';
 import { Doctor } from '../models';
 
 export async function fetchDoctors(): Promise<User[]> {

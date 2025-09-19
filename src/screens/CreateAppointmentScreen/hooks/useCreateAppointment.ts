@@ -1,8 +1,8 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useNavigation } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
-import { RootStackParamList } from '../../types/navigation';
-import { useAuth } from '../../contexts/AuthContext';
+import { RootStackParamList } from '../../../types/navigation';
+import { useAuth } from '../../../contexts/AuthContext';
 import { Appointment, Doctor } from '../models';
 import { addAppointment, loadAppointments } from '../services/appointmentsStorage';
 import { fetchDoctors, mapUsersToDoctors } from '../services/doctorsService';
