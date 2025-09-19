@@ -1,36 +1,14 @@
-// ====== IMPORTS DE DEPENDÊNCIAS E TIPOS ======
-import React, { useState } from 'react'; // React e hook para estado local.
-import styled from 'styled-components/native'; // Estilização dos componentes usando o tema.
-import { Button, Input, Text } from 'react-native-elements'; // Componentes prontos para formulário.
-import { Platform, View, TouchableOpacity } from 'react-native'; // Componentes nativos.
-import theme from '../styles/theme'; // Tema visual padronizado.
-import { Doctor } from '../types/doctors'; // Tipos de médicos.
-import { Appointment } from '../types/appointments'; // Tipos de consultas.
+import React, { useState, useEffect } from 'react';
+import styled from 'styled-components/native';
+import { Button, Input, Text } from 'react-native-elements';
+import { Platform, View, TouchableOpacity, Alert } from 'react-native';
+import theme from '../styles/theme';
+import { Doctor } from '../types/doctors';
+import { Appointment } from '../types/appointments';
+import { authApiService } from '../services/authApi';
+import { specialtiesApiService, Specialty } from '../services/specialtiesApi';
+import { User } from '../types/auth';
 
-// ====== LISTA MOCKADA DE MÉDICOS ======
-const doctors: Doctor[] = [
-   {
-      id: '1',
-      name: 'Dr. João Silva',
-      specialty: 'Cardiologista',
-      image: 'https://mighty.tools/mockmind-api/content/human/91.jpg',
-   },
-   {
-      id: '2',
-      name: 'Dra. Maria Santos',
-      specialty: 'Dermatologista',
-      image: 'https://mighty.tools/mockmind-api/content/human/97.jpg',
-   },
-   {
-      id: '3',
-      name: 'Dr. Pedro Oliveira',
-      specialty: 'Oftalmologista',
-      image: 'https://mighty.tools/mockmind-api/content/human/79.jpg',
-   },
-];
-// Lista fixa para testes. Futuramente será dinâmica.
-
-// ====== TIPAGEM DAS PROPS DO FORMULÁRIO ======
 type AppointmentFormProps = {
    onSubmit: (appointment: {
       doctorId: string;
@@ -40,7 +18,6 @@ type AppointmentFormProps = {
    }) => void;
 };
 
-// ====== FUNÇÃO PARA GERAR HORÁRIOS DISPONÍVEIS ======
 const generateTimeSlots = () => {
    const slots = [];
    for (let hour = 9; hour < 18; hour++) {
@@ -49,18 +26,73 @@ const generateTimeSlots = () => {
    }
    return slots;
 };
-// Gera horários de 9h às 18h, de meia em meia hora.
 
-// ====== COMPONENTE PRINCIPAL DO FORMULÁRIO ======
 const AppointmentForm: React.FC<AppointmentFormProps> = ({ onSubmit }) => {
-   // Estados para armazenar os dados do formulário
    const [selectedDoctor, setSelectedDoctor] = useState<string>('');
    const [dateInput, setDateInput] = useState('');
    const [selectedTime, setSelectedTime] = useState<string>('');
    const [description, setDescription] = useState('');
+   const [selectedSpecialty, setSelectedSpecialty] = useState<string>('');
+   
+   // Estados para dados da API
+   const [doctors, setDoctors] = useState<User[]>([]);
+   const [specialties, setSpecialties] = useState<Specialty[]>([]);
+   const [loading, setLoading] = useState(true);
+   
    const timeSlots = generateTimeSlots();
 
-   // Validação da data inserida
+   // Carrega especialidades e médicos ao montar o componente
+   useEffect(() => {
+      loadInitialData();
+   }, []);
+
+   // Carrega médicos quando uma especialidade é selecionada
+   useEffect(() => {
+      if (selectedSpecialty) {
+         loadDoctorsBySpecialty(selectedSpecialty);
+      } else {
+         loadAllDoctors();
+      }
+   }, [selectedSpecialty]);
+
+   const loadInitialData = async () => {
+      try {
+         setLoading(true);
+         const [specialtiesData, doctorsData] = await Promise.all([
+            specialtiesApiService.getAllSpecialties(),
+            authApiService.getAllDoctors(),
+         ]);
+         
+         setSpecialties(specialtiesData);
+         setDoctors(doctorsData);
+      } catch (error) {
+         console.error('Erro ao carregar dados:', error);
+         Alert.alert('Erro', 'Não foi possível carregar os dados. Tente novamente.');
+      } finally {
+         setLoading(false);
+      }
+   };
+
+   const loadAllDoctors = async () => {
+      try {
+         const doctorsData = await authApiService.getAllDoctors();
+         setDoctors(doctorsData);
+      } catch (error) {
+         console.error('Erro ao carregar médicos:', error);
+      }
+   };
+
+   const loadDoctorsBySpecialty = async (specialty: string) => {
+      try {
+         const doctorsData = await authApiService.getDoctorsBySpecialty(specialty);
+         setDoctors(doctorsData);
+         // Reset da seleção de médico quando muda a especialidade
+         setSelectedDoctor('');
+      } catch (error) {
+         console.error('Erro ao carregar médicos por especialidade:', error);
+      }
+   };
+
    const validateDate = (inputDate: string) => {
       const dateRegex = /^(\d{2})\/(\d{2})\/(\d{4})$/;
       const match = inputDate.match(dateRegex);
@@ -75,9 +107,11 @@ const AppointmentForm: React.FC<AppointmentFormProps> = ({ onSubmit }) => {
       return date >= today && date <= maxDate;
    };
 
-   // Formata a data enquanto digita
    const handleDateChange = (text: string) => {
+      // Remove todos os caracteres não numéricos
       const numbers = text.replace(/\D/g, '');
+      
+      // Formata a data enquanto digita
       let formattedDate = '';
       if (numbers.length > 0) {
          if (numbers.length <= 2) {
@@ -88,10 +122,10 @@ const AppointmentForm: React.FC<AppointmentFormProps> = ({ onSubmit }) => {
             formattedDate = `${numbers.slice(0, 2)}/${numbers.slice(2, 4)}/${numbers.slice(4, 8)}`;
          }
       }
+
       setDateInput(formattedDate);
    };
 
-   // Envia os dados do formulário
    const handleSubmit = () => {
       if (!selectedDoctor || !selectedTime || !description) {
          alert('Por favor, preencha todos os campos');
@@ -114,15 +148,45 @@ const AppointmentForm: React.FC<AppointmentFormProps> = ({ onSubmit }) => {
       });
    };
 
-   // Verifica se o horário está disponível (pode ser expandido)
    const isTimeSlotAvailable = (time: string) => {
+      // Aqui você pode adicionar lógica para verificar se o horário está disponível
+      // Por exemplo, verificar se já existe uma consulta agendada para este horário
       return true;
    };
 
-   // ====== INTERFACE VISUAL DO FORMULÁRIO ======
+   if (loading) {
+      return (
+         <Container>
+            <Text>Carregando...</Text>
+         </Container>
+      );
+   }
+
    return (
       <Container>
-         {/* Seleção de médico */}
+         <Title>Selecione a Especialidade</Title>
+         <SpecialtyContainer>
+            <SpecialtyButton 
+               selected={selectedSpecialty === ''}
+               onPress={() => setSelectedSpecialty('')}
+            >
+               <SpecialtyText selected={selectedSpecialty === ''}>
+                  Todas as Especialidades
+               </SpecialtyText>
+            </SpecialtyButton>
+            {specialties.map((specialty) => (
+               <SpecialtyButton
+                  key={specialty.id}
+                  selected={selectedSpecialty === specialty.name}
+                  onPress={() => setSelectedSpecialty(specialty.name)}
+               >
+                  <SpecialtyText selected={selectedSpecialty === specialty.name}>
+                     {specialty.name}
+                  </SpecialtyText>
+               </SpecialtyButton>
+            ))}
+         </SpecialtyContainer>
+
          <Title>Selecione o Médico</Title>
          <DoctorList>
             {doctors.map((doctor) => (
@@ -134,13 +198,16 @@ const AppointmentForm: React.FC<AppointmentFormProps> = ({ onSubmit }) => {
                   <DoctorImage source={{ uri: doctor.image }} />
                   <DoctorInfo>
                      <DoctorName>{doctor.name}</DoctorName>
-                     <DoctorSpecialty>{doctor.specialty}</DoctorSpecialty>
+                     <DoctorSpecialty>
+                        {doctor.role === 'doctor' && 'specialty' in doctor 
+                           ? doctor.specialty 
+                           : 'Especialidade não informada'}
+                     </DoctorSpecialty>
                   </DoctorInfo>
                </DoctorCard>
             ))}
          </DoctorList>
 
-         {/* Seleção de data e hora */}
          <Title>Data e Hora</Title>
          <Input
             placeholder="Data (DD/MM/AAAA)"
@@ -152,7 +219,6 @@ const AppointmentForm: React.FC<AppointmentFormProps> = ({ onSubmit }) => {
             errorMessage={dateInput && !validateDate(dateInput) ? 'Data inválida' : undefined}
          />
 
-         {/* Seleção de horário */}
          <TimeSlotsContainer>
             <TimeSlotsTitle>Horários Disponíveis:</TimeSlotsTitle>
             <TimeSlotsGrid>
@@ -174,7 +240,6 @@ const AppointmentForm: React.FC<AppointmentFormProps> = ({ onSubmit }) => {
             </TimeSlotsGrid>
          </TimeSlotsContainer>
 
-         {/* Campo de descrição da consulta */}
          <Input
             placeholder="Descrição da consulta"
             value={description}
@@ -184,7 +249,6 @@ const AppointmentForm: React.FC<AppointmentFormProps> = ({ onSubmit }) => {
             containerStyle={InputContainer}
          />
 
-         {/* Botão para agendar consulta */}
          <SubmitButton
             title="Agendar Consulta"
             onPress={handleSubmit}
@@ -199,11 +263,9 @@ const AppointmentForm: React.FC<AppointmentFormProps> = ({ onSubmit }) => {
    );
 };
 
-// ====== ESTILIZAÇÃO DOS COMPONENTES VISUAIS ======
 const Container = styled.View`
   padding: ${theme.spacing.medium}px;
 `;
-// Container principal do formulário
 
 const Title = styled.Text`
   font-size: ${theme.typography.subtitle.fontSize}px;
@@ -211,12 +273,10 @@ const Title = styled.Text`
   color: ${theme.colors.text};
   margin-bottom: ${theme.spacing.medium}px;
 `;
-// Título das seções do formulário
 
 const DoctorList = styled.ScrollView`
   margin-bottom: ${theme.spacing.large}px;
 `;
-// Lista de médicos para seleção
 
 const DoctorCard = styled(TouchableOpacity)<{ selected: boolean }>`
   flex-direction: row;
@@ -231,7 +291,6 @@ const DoctorCard = styled(TouchableOpacity)<{ selected: boolean }>`
   shadow-radius: 4px;
   shadow-offset: 0px 2px;
 `;
-// Cartão individual do médico
 
 const DoctorImage = styled.Image`
   width: 60px;
@@ -239,45 +298,38 @@ const DoctorImage = styled.Image`
   border-radius: 30px;
   margin-right: ${theme.spacing.medium}px;
 `;
-// Foto do médico
 
 const DoctorInfo = styled.View`
   flex: 1;
 `;
-// Container das informações do médico
 
 const DoctorName = styled.Text`
   font-size: ${theme.typography.subtitle.fontSize}px;
   font-weight: ${theme.typography.subtitle.fontWeight};
   color: ${theme.colors.text};
 `;
-// Nome do médico
 
 const DoctorSpecialty = styled.Text`
   font-size: ${theme.typography.body.fontSize}px;
   color: ${theme.colors.text};
   opacity: 0.8;
 `;
-// Especialidade do médico
 
 const TimeSlotsContainer = styled.View`
   margin-bottom: ${theme.spacing.large}px;
 `;
-// Container dos horários disponíveis
 
 const TimeSlotsTitle = styled.Text`
   font-size: ${theme.typography.body.fontSize}px;
   color: ${theme.colors.text};
   margin-bottom: ${theme.spacing.small}px;
 `;
-// Título dos horários
 
 const TimeSlotsGrid = styled.View`
   flex-direction: row;
   flex-wrap: wrap;
   gap: ${theme.spacing.small}px;
 `;
-// Grid dos botões de horários
 
 const TimeSlotButton = styled(TouchableOpacity)<{ selected: boolean; disabled: boolean }>`
   background-color: ${(props: { selected: boolean; disabled: boolean }) => 
@@ -297,7 +349,6 @@ const TimeSlotButton = styled(TouchableOpacity)<{ selected: boolean; disabled: b
         : theme.colors.text};
   opacity: ${(props: { disabled: boolean }) => props.disabled ? 0.5 : 1};
 `;
-// Botão de horário
 
 const TimeSlotText = styled(Text)<{ selected: boolean; disabled: boolean }>`
   font-size: ${theme.typography.body.fontSize}px;
@@ -308,7 +359,6 @@ const TimeSlotText = styled(Text)<{ selected: boolean; disabled: boolean }>`
         ? theme.colors.white 
         : theme.colors.text};
 `;
-// Texto do horário
 
 const InputContainer = {
    marginBottom: theme.spacing.medium,
@@ -316,12 +366,34 @@ const InputContainer = {
    borderRadius: 8,
    paddingHorizontal: theme.spacing.medium,
 };
-// Estilo do campo de input
 
 const SubmitButton = styled(Button)`
   margin-top: ${theme.spacing.large}px;
 `;
-// Botão de envio do formulário
 
-export default AppointmentForm;
-// Exporta o componente do formulário de agendamento 
+const SpecialtyContainer = styled.View`
+  flex-direction: row;
+  flex-wrap: wrap;
+  gap: ${theme.spacing.small}px;
+  margin-bottom: ${theme.spacing.large}px;
+`;
+
+const SpecialtyButton = styled(TouchableOpacity)<{ selected: boolean }>`
+  background-color: ${(props: { selected: boolean }) => 
+    props.selected ? theme.colors.primary : theme.colors.white};
+  padding: ${theme.spacing.small}px ${theme.spacing.medium}px;
+  border-radius: 20px;
+  border-width: 1px;
+  border-color: ${(props: { selected: boolean }) => 
+    props.selected ? theme.colors.primary : theme.colors.border};
+  margin-bottom: ${theme.spacing.small}px;
+`;
+
+const SpecialtyText = styled(Text)<{ selected: boolean }>`
+  font-size: ${theme.typography.body.fontSize}px;
+  color: ${(props: { selected: boolean }) => 
+    props.selected ? theme.colors.white : theme.colors.text};
+  text-align: center;
+`;
+
+export default AppointmentForm; 

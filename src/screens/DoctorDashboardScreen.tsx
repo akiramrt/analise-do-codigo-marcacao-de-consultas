@@ -1,38 +1,20 @@
-// Importa React e hook de estado
 import React, { useState } from 'react';
-// Biblioteca para estilização
 import styled from 'styled-components/native';
-// Importa componentes nativos
 import { ScrollView, ViewStyle, TextStyle } from 'react-native';
-// Importa componentes de UI
 import { Button, ListItem, Text } from 'react-native-elements';
-// Contexto de autenticação
 import { useAuth } from '../contexts/AuthContext';
-// Hook de navegação
 import { useNavigation } from '@react-navigation/native';
-// Tipagem de navegação
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
-// Hook que executa quando a tela volta ao foco
 import { useFocusEffect } from '@react-navigation/native';
-// Tipos de rotas principais
 import { RootStackParamList } from '../types/navigation';
-// Tema global
 import theme from '../styles/theme';
-// Componentes reutilizáveis
 import Header from '../components/Header';
-import StatisticsCard from '../components/StatisticsCard';
-import AppointmentActionModal from '../components/AppointmentActionModal';
-// Serviços
-import { statisticsService, Statistics } from '../services/statistics';
-import { notificationService } from '../services/notifications';
-// Persistência local
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
 type DoctorDashboardScreenProps = {
   navigation: NativeStackNavigationProp<RootStackParamList, 'DoctorDashboard'>;
 };
 
-// Tipagem da consulta
 interface Appointment {
   id: string;
   patientId: string;
@@ -45,12 +27,10 @@ interface Appointment {
   status: 'pending' | 'confirmed' | 'cancelled';
 }
 
-// Tipagem para estilos de status
 interface StyledProps {
   status: string;
 }
 
-// Função utilitária para cores de status
 const getStatusColor = (status: string) => {
   switch (status) {
     case 'confirmed':
@@ -62,7 +42,6 @@ const getStatusColor = (status: string) => {
   }
 };
 
-// Função utilitária para textos de status
 const getStatusText = (status: string) => {
   switch (status) {
     case 'confirmed':
@@ -74,24 +53,12 @@ const getStatusText = (status: string) => {
   }
 };
 
-/**
- * Tela de Dashboard do Médico
- * Exibe estatísticas pessoais, consultas e permite confirmar/cancelar.
- */
 const DoctorDashboardScreen: React.FC = () => {
-  // Usuário logado e logout
   const { user, signOut } = useAuth();
-  // Navegação tipada
   const navigation = useNavigation<DoctorDashboardScreenProps['navigation']>();
-  // Estados
   const [appointments, setAppointments] = useState<Appointment[]>([]);
-  const [statistics, setStatistics] = useState<Partial<Statistics> | null>(null);
   const [loading, setLoading] = useState(true);
-  const [modalVisible, setModalVisible] = useState(false);
-  const [selectedAppointment, setSelectedAppointment] = useState<Appointment | null>(null);
-  const [actionType, setActionType] = useState<'confirm' | 'cancel'>('confirm');
 
-  // Carrega consultas do médico logado
   const loadAppointments = async () => {
     try {
       const storedAppointments = await AsyncStorage.getItem('@MedicalApp:appointments');
@@ -102,12 +69,6 @@ const DoctorDashboardScreen: React.FC = () => {
         );
         setAppointments(doctorAppointments);
       }
-
-      // Estatísticas do médico
-      if (user?.id) {
-        const stats = await statisticsService.getDoctorStatistics(user.id);
-        setStatistics(stats);
-      }
     } catch (error) {
       console.error('Erro ao carregar consultas:', error);
     } finally {
@@ -115,61 +76,26 @@ const DoctorDashboardScreen: React.FC = () => {
     }
   };
 
-  // Abre modal de ação (confirmar/cancelar)
-  const handleOpenModal = (appointment: Appointment, action: 'confirm' | 'cancel') => {
-    setSelectedAppointment(appointment);
-    setActionType(action);
-    setModalVisible(true);
-  };
-
-  // Fecha modal
-  const handleCloseModal = () => {
-    setModalVisible(false);
-    setSelectedAppointment(null);
-  };
-
-  // Confirma ação do modal
-  const handleConfirmAction = async (reason?: string) => {
-    if (!selectedAppointment) return;
-
+  const handleUpdateStatus = async (appointmentId: string, newStatus: 'confirmed' | 'cancelled') => {
     try {
       const storedAppointments = await AsyncStorage.getItem('@MedicalApp:appointments');
       if (storedAppointments) {
         const allAppointments: Appointment[] = JSON.parse(storedAppointments);
         const updatedAppointments = allAppointments.map(appointment => {
-          if (appointment.id === selectedAppointment.id) {
-            return { 
-              ...appointment, 
-              status: actionType === 'confirm' ? 'confirmed' : 'cancelled',
-              ...(reason && { cancelReason: reason })
-            };
+          if (appointment.id === appointmentId) {
+            return { ...appointment, status: newStatus };
           }
           return appointment;
         });
         await AsyncStorage.setItem('@MedicalApp:appointments', JSON.stringify(updatedAppointments));
-
-        // Notificação ao paciente
-        if (actionType === 'confirm') {
-          await notificationService.notifyAppointmentConfirmed(
-            selectedAppointment.patientId,
-            selectedAppointment
-          );
-        } else {
-          await notificationService.notifyAppointmentCancelled(
-            selectedAppointment.patientId,
-            selectedAppointment,
-            reason
-          );
-        }
-
-        loadAppointments(); // Atualiza lista
+        loadAppointments(); // Recarrega a lista
       }
     } catch (error) {
       console.error('Erro ao atualizar status:', error);
     }
   };
 
-  // Carrega consultas quando a tela volta ao foco
+  // Carrega as consultas quando a tela estiver em foco
   useFocusEffect(
     React.useCallback(() => {
       loadAppointments();
@@ -178,13 +104,10 @@ const DoctorDashboardScreen: React.FC = () => {
 
   return (
     <Container>
-      {/* Cabeçalho */}
       <Header />
-
       <ScrollView contentContainerStyle={styles.scrollContent}>
         <Title>Minhas Consultas</Title>
 
-        {/* Botão para abrir Perfil */}
         <Button
           title="Meu Perfil"
           onPress={() => navigation.navigate('Profile')}
@@ -192,47 +115,6 @@ const DoctorDashboardScreen: React.FC = () => {
           buttonStyle={styles.buttonStyle}
         />
 
-        {/* Botão para Configurações */}
-        <Button
-          title="Configurações"
-          onPress={() => navigation.navigate('Settings')}
-          containerStyle={styles.button as ViewStyle}
-          buttonStyle={styles.settingsButton}
-        />
-
-        {/* Estatísticas */}
-        <SectionTitle>Minhas Estatísticas</SectionTitle>
-        {statistics && (
-          <StatisticsGrid>
-            <StatisticsCard
-              title="Total de Consultas"
-              value={statistics.totalAppointments || 0}
-              color={theme.colors.primary}
-              subtitle="Todas as consultas"
-            />
-            <StatisticsCard
-              title="Consultas Confirmadas"
-              value={statistics.confirmedAppointments || 0}
-              color={theme.colors.success}
-              subtitle={`${(statistics.statusPercentages?.confirmed || 0).toFixed(1)}% do total`}
-            />
-            <StatisticsCard
-              title="Pacientes Atendidos"
-              value={statistics.totalPatients || 0}
-              color={theme.colors.secondary}
-              subtitle="Pacientes únicos"
-            />
-            <StatisticsCard
-              title="Pendentes"
-              value={statistics.pendingAppointments || 0}
-              color={theme.colors.warning}
-              subtitle="Aguardando confirmação"
-            />
-          </StatisticsGrid>
-        )}
-
-        {/* Consultas */}
-        <SectionTitle>Minhas Consultas</SectionTitle>
         {loading ? (
           <LoadingText>Carregando consultas...</LoadingText>
         ) : appointments.length === 0 ? (
@@ -259,13 +141,13 @@ const DoctorDashboardScreen: React.FC = () => {
                   <ButtonContainer>
                     <Button
                       title="Confirmar"
-                      onPress={() => handleOpenModal(appointment, 'confirm')}
+                      onPress={() => handleUpdateStatus(appointment.id, 'confirmed')}
                       containerStyle={styles.actionButton as ViewStyle}
                       buttonStyle={styles.confirmButton}
                     />
                     <Button
                       title="Cancelar"
-                      onPress={() => handleOpenModal(appointment, 'cancel')}
+                      onPress={() => handleUpdateStatus(appointment.id, 'cancelled')}
                       containerStyle={styles.actionButton as ViewStyle}
                       buttonStyle={styles.cancelButton}
                     />
@@ -276,36 +158,17 @@ const DoctorDashboardScreen: React.FC = () => {
           ))
         )}
 
-        {/* Logout */}
         <Button
           title="Sair"
           onPress={signOut}
           containerStyle={styles.button as ViewStyle}
           buttonStyle={styles.logoutButton}
         />
-
-        {/* Modal de ação em consultas */}
-        {selectedAppointment && (
-          <AppointmentActionModal
-            visible={modalVisible}
-            onClose={handleCloseModal}
-            onConfirm={handleConfirmAction}
-            actionType={actionType}
-            appointmentDetails={{
-              patientName: selectedAppointment.patientName,
-              doctorName: selectedAppointment.doctorName,
-              date: selectedAppointment.date,
-              time: selectedAppointment.time,
-              specialty: selectedAppointment.specialty,
-            }}
-          />
-        )}
       </ScrollView>
     </Container>
   );
 };
 
-// Estilos
 const styles = {
   scrollContent: {
     padding: 20,
@@ -320,10 +183,6 @@ const styles = {
   },
   logoutButton: {
     backgroundColor: theme.colors.error,
-    paddingVertical: 12,
-  },
-  settingsButton: {
-    backgroundColor: theme.colors.secondary,
     paddingVertical: 12,
   },
   actionButton: {
@@ -355,7 +214,6 @@ const styles = {
   },
 };
 
-// Componentes estilizados
 const Container = styled.View`
   flex: 1;
   background-color: ${theme.colors.background};
@@ -367,14 +225,6 @@ const Title = styled.Text`
   color: ${theme.colors.text};
   margin-bottom: 20px;
   text-align: center;
-`;
-
-const SectionTitle = styled.Text`
-  font-size: 20px;
-  font-weight: bold;
-  color: ${theme.colors.text};
-  margin-bottom: 15px;
-  margin-top: 10px;
 `;
 
 const AppointmentCard = styled(ListItem)`
@@ -420,11 +270,4 @@ const ButtonContainer = styled.View`
   margin-top: 8px;
 `;
 
-const StatisticsGrid = styled.View`
-  flex-direction: row;
-  flex-wrap: wrap;
-  justify-content: space-between;
-  margin-bottom: 20px;
-`;
-
-export default DoctorDashboardScreen;
+export default DoctorDashboardScreen; 

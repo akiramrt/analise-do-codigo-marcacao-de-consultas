@@ -60,6 +60,7 @@ export interface RegisterData {
   name: string;
   email: string;
   password: string;
+  userType?: 'PACIENTE' | 'ADMIN'; // Opcional para compatibilidade
 }
 
 /**
@@ -79,5 +80,4 @@ export interface AuthContextData {
   signIn: (credentials: LoginCredentials) => Promise<void>;
   register: (data: RegisterData) => Promise<void>;
   signOut: () => Promise<void>;
-  updateUser: (user: User) => Promise<void>;
 } 

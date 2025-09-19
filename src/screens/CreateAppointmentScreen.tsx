@@ -1,37 +1,23 @@
-// Importa React e hook de estado
-import React, { useState } from 'react';
-// Biblioteca para estilização com styled-components
+import React, { useState, useEffect } from 'react';
 import styled from 'styled-components/native';
-// Importa componentes nativos do React Native
 import { ScrollView, ViewStyle } from 'react-native';
-// Importa componentes de UI prontos
 import { Button, Input } from 'react-native-elements';
-// Hook de autenticação (contexto customizado)
 import { useAuth } from '../contexts/AuthContext';
-// Hook de navegação
 import { useNavigation } from '@react-navigation/native';
-// Tipagem de navegação
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
-// Tipos de rotas principais
 import { RootStackParamList } from '../types/navigation';
-// Importa tema global
 import theme from '../styles/theme';
-// Componente de cabeçalho
 import Header from '../components/Header';
-// Lista de médicos
 import DoctorList from '../components/DoctorList';
-// Lista de horários disponíveis
 import TimeSlotList from '../components/TimeSlotList';
-// Serviço de notificações
-import { notificationService } from '../services/notifications';
-// Persistência local
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { authApiService } from '../services/authApi';
+import { User } from '../types/auth';
 
 type CreateAppointmentScreenProps = {
   navigation: NativeStackNavigationProp<RootStackParamList, 'CreateAppointment'>;
 };
 
-// Tipagem de uma consulta
 interface Appointment {
   id: string;
   patientId: string;
@@ -44,7 +30,6 @@ interface Appointment {
   status: 'pending' | 'confirmed' | 'cancelled';
 }
 
-// Tipagem de médico
 interface Doctor {
   id: string;
   name: string;
@@ -52,64 +37,68 @@ interface Doctor {
   image: string;
 }
 
-// Lista de médicos disponíveis (mock)
-const availableDoctors: Doctor[] = [
-  {
-    id: '1',
-    name: 'Dr. João Silva',
-    specialty: 'Cardiologia',
-    image: 'https://randomuser.me/api/portraits/men/1.jpg',
-  },
-  {
-    id: '2',
-    name: 'Dra. Maria Santos',
-    specialty: 'Pediatria',
-    image: 'https://randomuser.me/api/portraits/women/1.jpg',
-  },
-  {
-    id: '3',
-    name: 'Dr. Pedro Oliveira',
-    specialty: 'Ortopedia',
-    image: 'https://randomuser.me/api/portraits/men/2.jpg',
-  },
-  {
-    id: '4',
-    name: 'Dra. Ana Costa',
-    specialty: 'Dermatologia',
-    image: 'https://randomuser.me/api/portraits/women/2.jpg',
-  },
-  {
-    id: '5',
-    name: 'Dr. Carlos Mendes',
-    specialty: 'Oftalmologia',
-    image: 'https://randomuser.me/api/portraits/men/3.jpg',
-  },
-];
+// Médicos agora vêm da API através do AppointmentForm
 
-/**
- * Tela de Criação de Consulta
- * Permite ao paciente selecionar data, horário e médico,
- * salvando a consulta no AsyncStorage e notificando o médico.
- */
 const CreateAppointmentScreen: React.FC = () => {
-  // Usuário logado
   const { user } = useAuth();
-  // Navegação tipada
   const navigation = useNavigation<CreateAppointmentScreenProps['navigation']>();
-  // Estados da tela
   const [date, setDate] = useState('');
   const [selectedTime, setSelectedTime] = useState<string>('');
   const [selectedDoctor, setSelectedDoctor] = useState<Doctor | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+  
+  // Estados para dados da API
+  const [doctors, setDoctors] = useState<User[]>([]);
+  const [loadingDoctors, setLoadingDoctors] = useState(true);
 
-  // Cria nova consulta
+  // Carrega médicos ao montar o componente
+  useEffect(() => {
+    loadDoctors();
+  }, []);
+
+  const loadDoctors = async () => {
+    try {
+      setLoadingDoctors(true);
+      setError(''); // Limpa erros anteriores
+      const doctorsData = await authApiService.getAllDoctors();
+      setDoctors(doctorsData);
+      console.log(`${doctorsData.length} médicos carregados com sucesso`);
+    } catch (error) {
+      console.error('Erro ao carregar médicos:', error);
+      setError('Carregando médicos com dados locais...');
+      // Tentativa adicional com pequeno delay
+      setTimeout(async () => {
+        try {
+          const doctorsData = await authApiService.getAllDoctors();
+          setDoctors(doctorsData);
+          setError('');
+        } catch (retryError) {
+          setError('Médicos carregados com dados locais (API indisponível)');
+        }
+      }, 1000);
+    } finally {
+      setLoadingDoctors(false);
+    }
+  };
+
+  // Converte User[] para Doctor[]
+  const convertUsersToDoctors = (users: User[]): Doctor[] => {
+    return users.map(user => ({
+      id: user.id,
+      name: user.name,
+      specialty: user.role === 'doctor' && 'specialty' in user 
+        ? user.specialty 
+        : 'Especialidade não informada',
+      image: user.image
+    }));
+  };
+
   const handleCreateAppointment = async () => {
     try {
       setLoading(true);
       setError('');
 
-      // Valida preenchimento
       if (!date || !selectedTime || !selectedDoctor) {
         setError('Por favor, preencha a data e selecione um médico e horário');
         return;
@@ -119,7 +108,7 @@ const CreateAppointmentScreen: React.FC = () => {
       const storedAppointments = await AsyncStorage.getItem('@MedicalApp:appointments');
       const appointments: Appointment[] = storedAppointments ? JSON.parse(storedAppointments) : [];
 
-      // Monta nova consulta
+      // Cria nova consulta
       const newAppointment: Appointment = {
         id: Date.now().toString(),
         patientId: user?.id || '',
@@ -132,17 +121,14 @@ const CreateAppointmentScreen: React.FC = () => {
         status: 'pending',
       };
 
-      // Adiciona à lista
+      // Adiciona nova consulta à lista
       appointments.push(newAppointment);
 
-      // Salva no AsyncStorage
+      // Salva lista atualizada
       await AsyncStorage.setItem('@MedicalApp:appointments', JSON.stringify(appointments));
 
-      // Envia notificação ao médico
-      await notificationService.notifyNewAppointment(selectedDoctor.id, newAppointment);
-
       alert('Consulta agendada com sucesso!');
-      navigation.goBack(); // Volta para tela anterior
+      navigation.goBack();
     } catch (err) {
       setError('Erro ao agendar consulta. Tente novamente.');
     } finally {
@@ -152,14 +138,10 @@ const CreateAppointmentScreen: React.FC = () => {
 
   return (
     <Container>
-      {/* Cabeçalho fixo */}
       <Header />
-
-      {/* Conteúdo scrollável */}
       <ScrollView contentContainerStyle={styles.scrollContent}>
         <Title>Agendar Consulta</Title>
 
-        {/* Campo de data */}
         <Input
           placeholder="Data (DD/MM/AAAA)"
           value={date}
@@ -168,25 +150,25 @@ const CreateAppointmentScreen: React.FC = () => {
           keyboardType="numeric"
         />
 
-        {/* Lista de horários */}
         <SectionTitle>Selecione um Horário</SectionTitle>
         <TimeSlotList
           onSelectTime={setSelectedTime}
           selectedTime={selectedTime}
         />
 
-        {/* Lista de médicos */}
         <SectionTitle>Selecione um Médico</SectionTitle>
-        <DoctorList
-          doctors={availableDoctors}
-          onSelectDoctor={setSelectedDoctor}
-          selectedDoctorId={selectedDoctor?.id}
-        />
+        {loadingDoctors ? (
+          <ErrorText>Carregando médicos...</ErrorText>
+        ) : (
+          <DoctorList
+            doctors={convertUsersToDoctors(doctors)}
+            onSelectDoctor={setSelectedDoctor}
+            selectedDoctorId={selectedDoctor?.id}
+          />
+        )}
 
-        {/* Mensagem de erro */}
         {error ? <ErrorText>{error}</ErrorText> : null}
 
-        {/* Botão de confirmar agendamento */}
         <Button
           title="Agendar"
           onPress={handleCreateAppointment}
@@ -195,7 +177,6 @@ const CreateAppointmentScreen: React.FC = () => {
           buttonStyle={styles.buttonStyle}
         />
 
-        {/* Botão de cancelar (volta para tela anterior) */}
         <Button
           title="Cancelar"
           onPress={() => navigation.goBack()}
@@ -207,7 +188,6 @@ const CreateAppointmentScreen: React.FC = () => {
   );
 };
 
-// Estilos centrais
 const styles = {
   scrollContent: {
     padding: 20,
@@ -229,7 +209,6 @@ const styles = {
   },
 };
 
-// Componentes estilizados
 const Container = styled.View`
   flex: 1;
   background-color: ${theme.colors.background};

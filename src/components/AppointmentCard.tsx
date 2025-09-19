@@ -4,18 +4,16 @@ import { ViewStyle } from 'react-native';
 import { Card, Text, Avatar } from 'react-native-elements';
 import theme from '../styles/theme';
 
-// Propriedades esperadas pelo componente AppointmentCard
 interface AppointmentCardProps {
-  doctorName: string; // Nome do médico
-  date: string; // Data da consulta
-  time: string; // Horário da consulta
-  specialty: string; // Especialidade do médico
-  status: 'pending' | 'confirmed' | 'cancelled'; // Status da consulta
-  onPress?: () => void; // Ação ao clicar no card (opcional)
-  style?: ViewStyle; // Estilo customizado (opcional)
+  doctorName: string;
+  date: string;
+  time: string;
+  specialty: string;
+  status: 'pending' | 'confirmed' | 'cancelled';
+  onPress?: () => void;
+  style?: ViewStyle;
 }
 
-// Componente visual de card que exibe informações de uma consulta
 const AppointmentCard: React.FC<AppointmentCardProps> = ({
   doctorName,
   date,
@@ -25,7 +23,6 @@ const AppointmentCard: React.FC<AppointmentCardProps> = ({
   onPress,
   style,
 }) => {
-  // Define a cor do status da consulta de acordo com o tipo
   const getStatusColor = () => {
     switch (status) {
       case 'confirmed':
@@ -40,7 +37,6 @@ const AppointmentCard: React.FC<AppointmentCardProps> = ({
   return (
     <Card containerStyle={[styles.card, style]}>
       <CardContent>
-        {/* Informações do médico */}
         <DoctorInfo>
           <Avatar
             size="medium"
@@ -54,7 +50,6 @@ const AppointmentCard: React.FC<AppointmentCardProps> = ({
           </TextContainer>
         </DoctorInfo>
 
-        {/* Informações da consulta (data e horário) */}
         <AppointmentInfo>
           <InfoRow>
             <InfoLabel>Data:</InfoLabel>
@@ -66,7 +61,6 @@ const AppointmentCard: React.FC<AppointmentCardProps> = ({
           </InfoRow>
         </AppointmentInfo>
 
-        {/* Status visual da consulta */}
         <StatusContainer>
           <StatusDot color={getStatusColor()} />
           <StatusText color={getStatusColor()}>
@@ -78,7 +72,6 @@ const AppointmentCard: React.FC<AppointmentCardProps> = ({
   );
 };
 
-// Estilos aplicados diretamente no Card e Avatar
 const styles = {
   card: {
     borderRadius: 10,
@@ -96,7 +89,6 @@ const styles = {
   },
 };
 
-// Estilização adicional com styled-components
 const CardContent = styled.View`
   padding: 10px;
 `;
@@ -130,7 +122,7 @@ const AppointmentInfo = styled.View`
 const InfoRow = styled.View`
   flex-direction: row;
   justify-content: space-between;
-  margin-bottom: 5px;
+  marginBottom: 5px;
 `;
 
 const InfoLabel = styled.Text`
@@ -165,4 +157,4 @@ const StatusText = styled.Text<{ color: string }>`
   font-weight: 500;
 `;
 
-export default AppointmentCard;
+export default AppointmentCard; 

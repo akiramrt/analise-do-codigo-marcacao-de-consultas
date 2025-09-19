@@ -1,14 +1,8 @@
-// Importa React e hooks
 import React, { useState } from 'react';
-// Biblioteca de estilos
 import styled from 'styled-components/native';
-// Componentes UI
 import { Input, Button, Text } from 'react-native-elements';
-// Contexto de autenticação
 import { useAuth } from '../contexts/AuthContext';
-// Tema global
 import theme from '../styles/theme';
-// Tipos para estilo e navegação
 import { ViewStyle } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
@@ -18,22 +12,16 @@ type RegisterScreenProps = {
   navigation: NativeStackNavigationProp<RootStackParamList, 'Register'>;
 };
 
-/**
- * Tela de Cadastro de Pacientes
- * Permite criar uma nova conta de usuário (paciente).
- */
 const RegisterScreen: React.FC = () => {
   const { register } = useAuth();
   const navigation = useNavigation<RegisterScreenProps['navigation']>();
-
-  // Estados para formulário
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [userType, setUserType] = useState<'PACIENTE' | 'ADMIN'>('PACIENTE');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
 
-  // Função para cadastrar novo usuário
   const handleRegister = async () => {
     try {
       setLoading(true);
@@ -48,9 +36,10 @@ const RegisterScreen: React.FC = () => {
         name,
         email,
         password,
+        userType,
       });
 
-      // Redireciona para login após cadastro
+      // Após o registro bem-sucedido, navega para o login
       navigation.navigate('Login');
     } catch (err) {
       setError('Erro ao criar conta. Tente novamente.');
@@ -61,9 +50,8 @@ const RegisterScreen: React.FC = () => {
 
   return (
     <Container>
-      <Title>Cadastro de Paciente</Title>
+      <Title>Cadastro de Usuário</Title>
       
-      {/* Input Nome */}
       <Input
         placeholder="Nome completo"
         value={name}
@@ -72,7 +60,6 @@ const RegisterScreen: React.FC = () => {
         containerStyle={styles.input}
       />
 
-      {/* Input Email */}
       <Input
         placeholder="Email"
         value={email}
@@ -82,7 +69,6 @@ const RegisterScreen: React.FC = () => {
         containerStyle={styles.input}
       />
 
-      {/* Input Senha */}
       <Input
         placeholder="Senha"
         value={password}
@@ -91,10 +77,29 @@ const RegisterScreen: React.FC = () => {
         containerStyle={styles.input}
       />
 
-      {/* Exibe mensagem de erro */}
+      <SectionTitle>Tipo de Usuário</SectionTitle>
+      <UserTypeContainer>
+        <UserTypeButton 
+          selected={userType === 'PACIENTE'}
+          onPress={() => setUserType('PACIENTE')}
+        >
+          <UserTypeText selected={userType === 'PACIENTE'}>
+            👤 Paciente
+          </UserTypeText>
+        </UserTypeButton>
+        
+        <UserTypeButton 
+          selected={userType === 'ADMIN'}
+          onPress={() => setUserType('ADMIN')}
+        >
+          <UserTypeText selected={userType === 'ADMIN'}>
+            🔧 Administrador
+          </UserTypeText>
+        </UserTypeButton>
+      </UserTypeContainer>
+
       {error ? <ErrorText>{error}</ErrorText> : null}
 
-      {/* Botão cadastrar */}
       <Button
         title="Cadastrar"
         onPress={handleRegister}
@@ -103,7 +108,6 @@ const RegisterScreen: React.FC = () => {
         buttonStyle={styles.buttonStyle}
       />
 
-      {/* Botão voltar */}
       <Button
         title="Voltar para Login"
         onPress={() => navigation.navigate('Login')}
@@ -114,7 +118,6 @@ const RegisterScreen: React.FC = () => {
   );
 };
 
-// Estilos
 const styles = {
   input: {
     marginBottom: 15,
@@ -137,7 +140,6 @@ const styles = {
   },
 };
 
-// Componentes estilizados
 const Container = styled.View`
   flex: 1;
   padding: 20px;
@@ -159,4 +161,34 @@ const ErrorText = styled.Text`
   margin-bottom: 10px;
 `;
 
-export default RegisterScreen;
+const SectionTitle = styled.Text`
+  font-size: 16px;
+  font-weight: bold;
+  color: ${theme.colors.text};
+  margin-bottom: 12px;
+  margin-top: 8px;
+`;
+
+const UserTypeContainer = styled.View`
+  flex-direction: row;
+  justify-content: space-between;
+  margin-bottom: 20px;
+`;
+
+const UserTypeButton = styled.TouchableOpacity<{ selected: boolean }>`
+  flex: 1;
+  padding: 12px;
+  margin: 0 4px;
+  border-radius: 8px;
+  border: 2px solid ${(props: { selected: boolean }) => props.selected ? theme.colors.primary : theme.colors.border};
+  background-color: ${(props: { selected: boolean }) => props.selected ? theme.colors.primary + '20' : theme.colors.background};
+  align-items: center;
+`;
+
+const UserTypeText = styled.Text<{ selected: boolean }>`
+  color: ${(props: { selected: boolean }) => props.selected ? theme.colors.primary : theme.colors.text};
+  font-weight: ${(props: { selected: boolean }) => props.selected ? 'bold' : 'normal'};
+  font-size: 14px;
+`;
+
+export default RegisterScreen; 
