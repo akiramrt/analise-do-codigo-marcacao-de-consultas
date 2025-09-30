@@ -6,6 +6,12 @@
 
 Um aplicativo mobile para agendamento de consultas médicas, desenvolvido com React Native e TypeScript.
 
+## Autores
+
+- Eduardo Akira Murata (RM98713)
+- Deivison Pertel (RM550803)
+- Wesley Souza de Oliveira (RM97874)
+
 ## Sobre o Projeto
 
 Este é um aplicativo mobile desenvolvido em React Native para agendamento de consultas médicas. O sistema permite que pacientes visualizem médicos disponíveis, agendem consultas e gerenciem seus compromissos médicos de forma simples e intuitiva.
